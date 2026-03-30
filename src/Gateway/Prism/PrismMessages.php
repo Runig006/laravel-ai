@@ -44,7 +44,7 @@ class PrismMessages
         return $messages
             ->map(function ($message) {
                 if ($message instanceof ToolResultMessage) {
-                    return new PrismToolResultMessage(
+                    $prismMsg = new PrismToolResultMessage(
                         $message->toolResults->map(fn ($toolResult) => new PrismToolResult(
                             toolCallId: $toolResult->id,
                             toolName: $toolResult->name,
@@ -53,15 +53,23 @@ class PrismMessages
                             toolCallResultId: $toolResult->resultId,
                         ))->all()
                     );
+                    if (!empty($message->getProviderOptions())) {
+                        $prismMsg = $prismMsg->withProviderOptions($message->getProviderOptions());
+                    }
+                    return $prismMsg;
                 }
 
                 $message = Message::tryFrom($message);
 
                 if ($message->role === MessageRole::User) {
-                    return new PrismUserMessage(
+                    $prismMsg = new PrismUserMessage(
                         $message->content,
                         additionalContent: static::fromLaravelAttachments($message->attachments ?? new Collection)->all(),
                     );
+                    if (!empty($message->getProviderOptions())) {
+                        $prismMsg = $prismMsg->withProviderOptions($message->getProviderOptions());
+                    }
+                    return $prismMsg;
                 }
 
                 if ($message->role === MessageRole::Assistant) {
@@ -76,10 +84,14 @@ class PrismMessages
                         ))->all()
                         : [];
 
-                    return new PrismAssistantMessage(
+                    $prismMsg = new PrismAssistantMessage(
                         $message->content ?? '',
                         toolCalls: $toolCalls,
                     );
+                    if (!empty($message->getProviderOptions())) {
+                        $prismMsg = $prismMsg->withProviderOptions($message->getProviderOptions());
+                    }
+                    return $prismMsg;
                 }
             })->filter()->values();
     }
