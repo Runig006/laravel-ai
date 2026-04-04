@@ -16,3 +16,10 @@ loop and never instantiates a Laravel AI Agent, this made it impossible to pass 
 without implementing the entire Agent interface.
 
 - `src/Gateway/TextGenerationOptions.php` — changed `$agent` type from `?Agent` to `Agent|HasProviderOptions|null`
+
+## MapsTools uses registered key as tool name instead of classname
+`mapTools()` passed only `$tool` to `mapTool()`, which derived the function name from the class name.
+When multiple MCP tools share the same adapter class (e.g. `McpToolAdapter`), this produced
+duplicate tool names and a 400 from the API.
+
+- `src/Gateway/OpenAi/Concerns/MapsTools.php` — `mapTools()` now passes `$key` to `mapTool($key, $tool)`; `mapTool` uses the registered key as the function name instead of the classname
