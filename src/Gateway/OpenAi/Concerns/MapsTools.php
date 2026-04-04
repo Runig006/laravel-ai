@@ -22,11 +22,11 @@ trait MapsTools
     {
         $mapped = [];
 
-        foreach ($tools as $tool) {
+        foreach ($tools as $key => $tool) {
             if ($tool instanceof ProviderTool) {
                 $mapped[] = $this->mapProviderTool($tool, $provider);
             } elseif ($tool instanceof Tool) {
-                $mapped[] = $this->mapTool($tool);
+                $mapped[] = $this->mapTool($key, $tool);
             }
         }
 
@@ -36,13 +36,13 @@ trait MapsTools
     /**
      * Map a regular tool to an OpenAI function definition.
      */
-    protected function mapTool(Tool $tool): array
+    protected function mapTool(string $name, Tool $tool): array
     {
         $schema = $tool->schema(new JsonSchemaTypeFactory);
 
         $definition = [
             'type' => 'function',
-            'name' => class_basename($tool),
+            'name' => $name,
             'description' => (string) $tool->description(),
             'strict' => true,
         ];
