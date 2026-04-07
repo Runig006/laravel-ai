@@ -1,5 +1,6 @@
 {
     "name": "laravel/ai",
+    "version": "0.4-dev",
     "description": "The official AI SDK for Laravel.",
     "license": "MIT",
     "keywords": [
@@ -21,7 +22,7 @@
         "illuminate/support": "^12.0|^13.0",
         "laravel/prompts": "^0.3.6",
         "laravel/serializable-closure": "^2.0",
-        "prism-php/prism": "^0.99.0"
+        "prism-php/prism": "^0.100-dev"
     },
     "require-dev": {
         "laravel/pint": "^1.26",
