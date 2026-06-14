@@ -336,20 +336,35 @@ trait HandlesTextStreaming
         }
 
         if (filled($pendingToolCalls) && $stopReason === 'tool_use') {
-            yield from $this->handleStreamingToolCalls(
-                $invocationId,
-                $provider,
-                $model,
-                $tools,
-                $schema,
-                $options,
-                $pendingToolCalls,
-                $responseContent,
-                $requestBody,
-                $depth,
-                $maxSteps,
-                $timeout,
-            );
+            // Gate tool execution on maxSteps, consistent with the non-streaming path:
+            // when the step budget is exhausted, surface the tool calls (already emitted
+            // as ToolCall events above) without executing them, so the caller stays in
+            // control of execution/approval.
+            if ($depth + 1 < ($maxSteps ?? round(count($tools) * 1.5))) {
+                yield from $this->handleStreamingToolCalls(
+                    $invocationId,
+                    $provider,
+                    $model,
+                    $tools,
+                    $schema,
+                    $options,
+                    $pendingToolCalls,
+                    $responseContent,
+                    $requestBody,
+                    $depth,
+                    $maxSteps,
+                    $timeout,
+                );
+
+                return;
+            }
+
+            yield (new StreamEnd(
+                $this->generateEventId(),
+                FinishReason::ToolCalls->value,
+                $usage ?? new Usage(0, 0),
+                time(),
+            ))->withInvocationId($invocationId);
 
             return;
         }

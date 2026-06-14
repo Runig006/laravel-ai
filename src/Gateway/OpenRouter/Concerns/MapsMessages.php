@@ -43,7 +43,10 @@ trait MapsMessages
      */
     protected function mapUserMessage(UserMessage|Message $message, array &$chatMessages): void
     {
-        if (! $message instanceof UserMessage || $message->attachments->isEmpty()) {
+        $options = $message->getProviderOptions();
+        $hasAttachments = $message instanceof UserMessage && $message->attachments->isNotEmpty();
+
+        if (! $hasAttachments && empty($options)) {
             $chatMessages[] = [
                 'role' => 'user',
                 'content' => $message->content,
@@ -52,12 +55,22 @@ trait MapsMessages
             return;
         }
 
+        $content = [
+            ['type' => 'text', 'text' => $message->content],
+        ];
+
+        if ($hasAttachments) {
+            $content = [...$content, ...$this->mapAttachments($message->attachments)];
+        }
+
+        if (! empty($options)) {
+            $lastIndex = array_key_last($content);
+            $content[$lastIndex] = array_merge($content[$lastIndex], $options);
+        }
+
         $chatMessages[] = [
             'role' => 'user',
-            'content' => [
-                ['type' => 'text', 'text' => $message->content],
-                ...$this->mapAttachments($message->attachments),
-            ],
+            'content' => $content,
         ];
     }
 

@@ -237,6 +237,17 @@ trait HandlesTextStreaming
             ))->withInvocationId($invocationId);
         }
 
+        if ($depth + 1 >= ($maxSteps ?? round(count($tools) * 1.5))) {
+            yield (new StreamEnd(
+                $this->generateEventId(),
+                'tool_calls',
+                new Usage(0, 0),
+                time(),
+            ))->withInvocationId($invocationId);
+
+            return;
+        }
+
         $toolResults = [];
 
         foreach ($mappedToolCalls as $toolCall) {

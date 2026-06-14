@@ -17,7 +17,7 @@ class TextGenerationOptions
         public readonly ?int $maxSteps = null,
         public readonly ?int $maxTokens = null,
         public readonly ?float $temperature = null,
-        public readonly ?Agent $agent = null,
+        public readonly Agent|HasProviderOptions|null $agent = null,
         public readonly ?float $topP = null,
     ) {
         //

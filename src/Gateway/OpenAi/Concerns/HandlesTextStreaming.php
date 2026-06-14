@@ -284,6 +284,17 @@ trait HandlesTextStreaming
         }
 
         if (filled($pendingToolCalls)) {
+            if ($depth + 1 >= ($maxSteps ?? round(count($tools) * 1.5))) {
+                yield (new StreamEnd(
+                    $this->generateEventId(),
+                    $this->extractFinishReason($responseData)->value,
+                    $usage ?? new Usage(0, 0),
+                    time(),
+                ))->withInvocationId($invocationId);
+
+                return;
+            }
+
             yield from $this->handleStreamingToolCalls(
                 $invocationId,
                 $responseId,

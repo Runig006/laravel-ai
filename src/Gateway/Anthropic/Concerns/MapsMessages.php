@@ -43,6 +43,8 @@ trait MapsMessages
             $content = array_merge($this->mapAttachments($message->attachments), $content);
         }
 
+        $this->applyMessageProviderOptions($content, $message);
+
         $mapped[] = [
             'role' => 'user',
             'content' => $content,
@@ -55,9 +57,13 @@ trait MapsMessages
     protected function mapAssistantMessage(AssistantMessage|Message $message, array &$mapped): void
     {
         if ($message instanceof AssistantMessage && filled($message->providerContentBlocks)) {
+            $content = $this->ensureToolInputIsObject($message->providerContentBlocks);
+
+            $this->applyMessageProviderOptions($content, $message);
+
             $mapped[] = [
                 'role' => 'assistant',
-                'content' => $this->ensureToolInputIsObject($message->providerContentBlocks),
+                'content' => $content,
             ];
 
             return;
@@ -101,6 +107,8 @@ trait MapsMessages
         }
 
         if (filled($content)) {
+            $this->applyMessageProviderOptions($content, $message);
+
             $mapped[] = [
                 'role' => 'assistant',
                 'content' => $content,
@@ -127,9 +135,29 @@ trait MapsMessages
             ];
         }
 
+        $this->applyMessageProviderOptions($content, $message);
+
         $mapped[] = [
             'role' => 'user',
             'content' => $content,
         ];
+    }
+
+    /**
+     * Inject per-message provider options (e.g. cache_control) into the last content block.
+     *
+     * @param  array<int, array<string, mixed>>  $content
+     */
+    protected function applyMessageProviderOptions(array &$content, Message $message): void
+    {
+        $options = $message->getProviderOptions();
+
+        if (empty($options) || empty($content)) {
+            return;
+        }
+
+        $lastIndex = array_key_last($content);
+
+        $content[$lastIndex] = array_merge($content[$lastIndex], $options);
     }
 }

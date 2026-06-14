@@ -184,6 +184,17 @@ trait HandlesTextStreaming
                 ))->withInvocationId($invocationId);
             }
 
+            if ($depth + 1 >= ($maxSteps ?? round(count($tools) * 1.5))) {
+                yield (new StreamEnd(
+                    $this->generateEventId(),
+                    $this->extractFinishReason($lastData)->value,
+                    $usage ?? new Usage(0, 0),
+                    time(),
+                ))->withInvocationId($invocationId);
+
+                return;
+            }
+
             yield from $this->handleStreamingToolCalls(
                 $invocationId,
                 $provider,
