@@ -79,6 +79,59 @@ describe('tool calls', function () {
     });
 });
 
+describe('tool execution gating', function () {
+    test('streaming surfaces tool calls without executing them when maxSteps is 1', function () {
+        // Single faked response only: if the gate were broken and the tool executed,
+        // the gateway would loop and make a second (un-faked) request.
+        Http::fake([
+            'api.anthropic.com/*' => Http::response(
+                body: $this->ssePayload([
+                    $this->messageStart(),
+                    $this->contentBlockStart(0, ['type' => 'tool_use', 'id' => 'toolu_1', 'name' => 'FixedNumberGenerator', 'input' => '']),
+                    $this->contentBlockDelta(0, ['type' => 'input_json_delta', 'partial_json' => '{}']),
+                    $this->contentBlockStop(0),
+                    $this->messageDelta('tool_use', 5),
+                ]),
+                status: 200,
+                headers: ['Content-Type' => 'text/event-stream'],
+            ),
+        ]);
+
+        $agent = new class implements \Laravel\Ai\Contracts\Agent, \Laravel\Ai\Contracts\HasTools {
+            use \Laravel\Ai\Promptable;
+
+            public function instructions(): string
+            {
+                return 'Generate a number.';
+            }
+
+            public function tools(): iterable
+            {
+                return [new \Tests\Fixtures\Tools\FixedNumberGenerator];
+            }
+
+            public function maxSteps(): int
+            {
+                return 1;
+            }
+        };
+
+        $events = $this->collectStreamEvents(agent: $agent);
+
+        $toolCalls = array_values(array_filter($events, fn ($e) => $e instanceof ToolCallEvent));
+        $toolResults = array_values(array_filter($events, fn ($e) => $e instanceof \Laravel\Ai\Streaming\Events\ToolResult));
+        $ends = array_values(array_filter($events, fn ($e) => $e instanceof StreamEnd));
+
+        expect($toolCalls)->not->toBeEmpty()
+            ->and($toolCalls[0]->toolCall)->name->toBe('FixedNumberGenerator')
+            ->and($toolResults)->toBeEmpty()
+            ->and($ends)->not->toBeEmpty()
+            ->and($ends[0]->reason)->toBe(FinishReason::ToolCalls->value);
+
+        Http::assertSentCount(1);
+    });
+});
+
 describe('thinking blocks', function () {
     test('streaming handles thinking blocks', function () {
         Http::fake([
