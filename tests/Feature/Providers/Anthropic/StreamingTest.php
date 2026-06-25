@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Promptable;
 use Laravel\Ai\Responses\Data\FinishReason;
 use Laravel\Ai\Streaming\Events\Error;
 use Laravel\Ai\Streaming\Events\ProviderToolEvent;
@@ -13,7 +16,9 @@ use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\TextEnd;
 use Laravel\Ai\Streaming\Events\TextStart;
 use Laravel\Ai\Streaming\Events\ToolCall as ToolCallEvent;
+use Laravel\Ai\Streaming\Events\ToolResult;
 use Tests\Fixtures\Agents\ProviderOptionsWithToolsAgent;
+use Tests\Fixtures\Tools\FixedNumberGenerator;
 
 describe('text streaming', function () {
     test('streaming emits text events', function () {
@@ -97,8 +102,9 @@ describe('tool execution gating', function () {
             ),
         ]);
 
-        $agent = new class implements \Laravel\Ai\Contracts\Agent, \Laravel\Ai\Contracts\HasTools {
-            use \Laravel\Ai\Promptable;
+        $agent = new class implements Agent, HasTools
+        {
+            use Promptable;
 
             public function instructions(): string
             {
@@ -107,7 +113,7 @@ describe('tool execution gating', function () {
 
             public function tools(): iterable
             {
-                return [new \Tests\Fixtures\Tools\FixedNumberGenerator];
+                return [new FixedNumberGenerator];
             }
 
             public function maxSteps(): int
@@ -119,7 +125,7 @@ describe('tool execution gating', function () {
         $events = $this->collectStreamEvents(agent: $agent);
 
         $toolCalls = array_values(array_filter($events, fn ($e) => $e instanceof ToolCallEvent));
-        $toolResults = array_values(array_filter($events, fn ($e) => $e instanceof \Laravel\Ai\Streaming\Events\ToolResult));
+        $toolResults = array_values(array_filter($events, fn ($e) => $e instanceof ToolResult));
         $ends = array_values(array_filter($events, fn ($e) => $e instanceof StreamEnd));
 
         expect($toolCalls)->not->toBeEmpty()
